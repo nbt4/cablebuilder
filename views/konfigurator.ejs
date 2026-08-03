@@ -68,8 +68,8 @@
       </section>
 
       <script>
-        window.CABLEBUILDER_CONNECTORS = <%- JSON.stringify(connectors) %>;
-        window.CABLEBUILDER_CABLES = <%- JSON.stringify(cables) %>;
+        window.CABLEBUILDER_CONNECTORS = <%- JSON.stringify(connectors).replace(/</g, '\\u003c') %>;
+        window.CABLEBUILDER_CABLES = <%- JSON.stringify(cables).replace(/</g, '\\u003c') %>;
       </script>
       <script src="/js/konfigurator.js"></script>
     <% } %>

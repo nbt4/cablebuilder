@@ -1,5 +1,6 @@
 const express = require('express');
 const db = require('../db');
+const { sanitizeWebsite } = require('../sanitize');
 
 const router = express.Router();
 
@@ -16,7 +17,7 @@ router.post('/', (req, res) => {
   const { name, website, price, length_m } = req.body;
   if (name && price && length_m) {
     db.prepare('INSERT INTO shopping_list (name, website, price, length_m) VALUES (?, ?, ?, ?)')
-      .run(name.trim(), (website || '').trim(), parseFloat(price), parseFloat(length_m));
+      .run(name.trim(), sanitizeWebsite(website), parseFloat(price), parseFloat(length_m));
   }
   res.redirect('/einkaufsliste');
 });
