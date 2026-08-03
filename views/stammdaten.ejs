@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <%- include('partials/head') %>
+</head>
+<body>
+  <%- include('partials/nav') %>
+
+  <main class="container">
+    <h1>Stecker &amp; Kabel</h1>
+    <p class="subtitle">Stammdaten für den Konfigurator pflegen.</p>
+
+    <div class="grid-2">
+      <section class="card">
+        <h2>Stecker</h2>
+        <form method="post" action="/stammdaten/stecker" class="form-row">
+          <input type="text" name="name" placeholder="Name (z.B. XLR male)" required>
+          <input type="url" name="website" placeholder="Website (optional)">
+          <input type="number" step="0.01" min="0" name="price" placeholder="Preis €" required>
+          <button type="submit">Hinzufügen</button>
+        </form>
+
+        <table>
+          <thead>
+            <tr><th>Name</th><th>Website</th><th>Preis</th><th></th></tr>
+          </thead>
+          <tbody>
+            <% connectors.forEach(c => { %>
+              <tr>
+                <td><%= c.name %></td>
+                <td>
+                  <% if (c.website) { %>
+                    <a href="<%= c.website %>" target="_blank" rel="noopener">Link</a>
+                  <% } %>
+                </td>
+                <td><%= c.price.toFixed(2) %> €</td>
+                <td>
+                  <form method="post" action="/stammdaten/stecker/<%= c.id %>/delete" onsubmit="return confirm('Stecker löschen?');">
+                    <button type="submit" class="btn-danger">Löschen</button>
+                  </form>
+                </td>
+              </tr>
+            <% }) %>
+            <% if (connectors.length === 0) { %>
+              <tr><td colspan="4" class="empty">Noch keine Stecker angelegt.</td></tr>
+            <% } %>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card">
+        <h2>Kabel</h2>
+        <form method="post" action="/stammdaten/kabel" class="form-row">
+          <input type="text" name="name" placeholder="Name (z.B. CAT7 S/FTP)" required>
+          <input type="url" name="website" placeholder="Website (optional)">
+          <input type="number" step="0.01" min="0" name="price_per_meter" placeholder="Preis €/m" required>
+          <button type="submit">Hinzufügen</button>
+        </form>
+
+        <table>
+          <thead>
+            <tr><th>Name</th><th>Website</th><th>Preis/m</th><th></th></tr>
+          </thead>
+          <tbody>
+            <% cables.forEach(c => { %>
+              <tr>
+                <td><%= c.name %></td>
+                <td>
+                  <% if (c.website) { %>
+                    <a href="<%= c.website %>" target="_blank" rel="noopener">Link</a>
+                  <% } %>
+                </td>
+                <td><%= c.price_per_meter.toFixed(2) %> €/m</td>
+                <td>
+                  <form method="post" action="/stammdaten/kabel/<%= c.id %>/delete" onsubmit="return confirm('Kabel löschen?');">
+                    <button type="submit" class="btn-danger">Löschen</button>
+                  </form>
+                </td>
+              </tr>
+            <% }) %>
+            <% if (cables.length === 0) { %>
+              <tr><td colspan="4" class="empty">Noch keine Kabel angelegt.</td></tr>
+            <% } %>
+          </tbody>
+        </table>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

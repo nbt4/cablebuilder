@@ -1,0 +1,9 @@
+services:
+  cablebuilder:
+    image: nobentie/cablebuilder:latest
+    container_name: cablebuilder
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3040}:3000"
+    volumes:
+      - ./data:/app/data

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <%- include('partials/head') %>
+</head>
+<body>
+  <%- include('partials/nav') %>
+
+  <main class="container">
+    <h1>Einkaufsliste</h1>
+    <p class="subtitle">Gefundene Kabel-Angebote sammeln und nach Preis/m vergleichen.</p>
+
+    <section class="card">
+      <form method="post" action="/einkaufsliste" class="form-row">
+        <input type="text" name="name" placeholder="Bezeichnung (z.B. Amazon HDMI 5m)" required>
+        <input type="url" name="website" placeholder="Website (optional)">
+        <input type="number" step="0.01" min="0" name="price" placeholder="Preis €" required>
+        <input type="number" step="0.01" min="0.01" name="length_m" placeholder="Länge m" required>
+        <button type="submit">Hinzufügen</button>
+      </form>
+
+      <table>
+        <thead>
+          <tr><th>Bezeichnung</th><th>Website</th><th>Länge</th><th>Preis</th><th>Preis/m</th><th></th></tr>
+        </thead>
+        <tbody>
+          <% items.forEach(item => { %>
+            <tr class="<%= item.id === cheapestId ? 'best-value' : '' %>">
+              <td>
+                <%= item.name %>
+                <% if (item.id === cheapestId) { %><span class="badge">Bester Preis/m</span><% } %>
+              </td>
+              <td>
+                <% if (item.website) { %>
+                  <a href="<%= item.website %>" target="_blank" rel="noopener">Link</a>
+                <% } %>
+              </td>
+              <td><%= item.length_m %> m</td>
+              <td><%= item.price.toFixed(2) %> €</td>
+              <td><%= item.price_per_meter.toFixed(2) %> €/m</td>
+              <td>
+                <form method="post" action="/einkaufsliste/<%= item.id %>/delete" onsubmit="return confirm('Eintrag löschen?');">
+                  <button type="submit" class="btn-danger">Löschen</button>
+                </form>
+              </td>
+            </tr>
+          <% }) %>
+          <% if (items.length === 0) { %>
+            <tr><td colspan="6" class="empty">Noch keine Angebote gespeichert.</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>

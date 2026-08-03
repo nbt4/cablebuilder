@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <%- include('partials/head') %>
+</head>
+<body>
+  <%- include('partials/nav') %>
+
+  <main class="container">
+    <h1>Konfigurator</h1>
+    <p class="subtitle">Stecker, Kabel, Länge und Menge wählen – der Preis wird sofort berechnet.</p>
+
+    <% if (connectors.length === 0 || cables.length === 0) { %>
+      <p class="empty">
+        Bitte zuerst unter <a href="/stammdaten">Stecker &amp; Kabel</a> mindestens einen Stecker und ein Kabel anlegen.
+      </p>
+    <% } else { %>
+      <section class="card">
+        <div class="form-grid">
+          <label>
+            Stecker A
+            <select id="connectorA">
+              <% connectors.forEach(c => { %>
+                <option value="<%= c.id %>"><%= c.name %> (<%= c.price.toFixed(2) %> €)</option>
+              <% }) %>
+            </select>
+          </label>
+
+          <label>
+            Stecker B
+            <select id="connectorB">
+              <% connectors.forEach(c => { %>
+                <option value="<%= c.id %>"><%= c.name %> (<%= c.price.toFixed(2) %> €)</option>
+              <% }) %>
+            </select>
+          </label>
+
+          <label>
+            Kabeltyp
+            <select id="cableType">
+              <% cables.forEach(c => { %>
+                <option value="<%= c.id %>"><%= c.name %> (<%= c.price_per_meter.toFixed(2) %> €/m)</option>
+              <% }) %>
+            </select>
+          </label>
+
+          <label>
+            Länge (m)
+            <input type="number" id="length" step="0.1" min="0" value="1">
+          </label>
+
+          <label>
+            Menge
+            <input type="number" id="quantity" step="1" min="1" value="1">
+          </label>
+        </div>
+
+        <div class="result">
+          <div class="result-row">
+            <span>Preis pro Kabel</span>
+            <strong id="unitPrice">–</strong>
+          </div>
+          <div class="result-row total">
+            <span>Gesamtpreis</span>
+            <strong id="totalPrice">–</strong>
+          </div>
+        </div>
+      </section>
+
+      <script>
+        window.CABLEBUILDER_CONNECTORS = <%- JSON.stringify(connectors) %>;
+        window.CABLEBUILDER_CABLES = <%- JSON.stringify(cables) %>;
+      </script>
+      <script src="/js/konfigurator.js"></script>
+    <% } %>
+  </main>
+</body>
+</html>
