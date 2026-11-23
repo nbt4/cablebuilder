@@ -8,6 +8,8 @@ const fields = {
   length: document.getElementById('length'),
   quantity: document.getElementById('quantity'),
 };
+const unitPriceOutput = document.getElementById('unitPrice');
+const totalPriceOutput = document.getElementById('totalPrice');
 
 function round2(value) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
@@ -22,29 +24,6 @@ function calculateConfigPrice(connectorAPrice, connectorBPrice, pricePerMeter, l
 function formatEUR(value) {
   return value.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
 }
-
-/**
- * Wie weit das gezeichnete Kabel in der Vorschau durchhängt (in SVG-Einheiten, 0–80).
- * Längere Kabel hängen stärker durch. Die Wurzel sorgt dafür, dass sich kurze Längen
- * (0,5 m vs. 2 m) deutlich unterscheiden, lange Längen (25 m vs. 50 m) aber nicht aus dem Bild laufen.
- */
-function cableSag(lengthM) {
-  const maxSag = 80;
-  const referenceLength = 50; // ab hier maximaler Durchhang
-  const ratio = Math.min(Math.max(lengthM, 0) / referenceLength, 1);
-  return 6 + Math.sqrt(ratio) * (maxSag - 6);
-}
-
-const wire = document.getElementById('cableWire');
-const labels = {
-  connectorA: document.getElementById('labelConnectorA'),
-  connectorB: document.getElementById('labelConnectorB'),
-  cable: document.getElementById('labelCable'),
-  length: document.getElementById('labelLength'),
-  quantity: document.getElementById('labelQuantity'),
-  unitPrice: document.getElementById('unitPrice'),
-  totalPrice: document.getElementById('totalPrice'),
-};
 
 function update() {
   const connectorA = connectorsById.get(Number(fields.connectorA.value));
@@ -61,17 +40,14 @@ function update() {
     quantity,
   );
 
-  labels.unitPrice.textContent = formatEUR(result.unitPrice);
-  labels.totalPrice.textContent = formatEUR(result.totalPrice);
-  labels.connectorA.textContent = connectorA?.name || '–';
-  labels.connectorB.textContent = connectorB?.name || '–';
-  labels.cable.textContent = cable?.name || '–';
-  labels.length.textContent = `${length.toLocaleString('de-DE')} m`;
-  labels.quantity.textContent = quantity > 1 ? `für ${quantity} Stück` : '';
-
-  const y = 95 + cableSag(length);
-  wire.setAttribute('d', `M118 95 C 230 ${y}, 370 ${y}, 482 95`);
+  unitPriceOutput.textContent = formatEUR(result.unitPrice);
+  totalPriceOutput.textContent = formatEUR(result.totalPrice);
 }
+
+document.getElementById('swapConnectors').addEventListener('click', () => {
+  [fields.connectorA.value, fields.connectorB.value] = [fields.connectorB.value, fields.connectorA.value];
+  update();
+});
 
 Object.values(fields).forEach((field) => field.addEventListener('input', update));
 update();

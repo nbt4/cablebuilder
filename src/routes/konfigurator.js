@@ -1,10 +1,9 @@
 const express = require('express');
 const db = require('../db');
-const { aggregateConfigurations } = require('../shopping-list');
 const {
   createDefaultSet,
-  loadSetConfigurations,
-  selectConfigurationSet,
+  duplicateSet,
+  loadSetWithShoppingList,
 } = require('../configuration-sets');
 const { combinedCsv, combinedPdf } = require('../export');
 const { buildAutomaticName } = require('../configurations');
@@ -57,14 +56,21 @@ router.get('/', (req, res) => {
     LEFT JOIN cable_categories cc ON cc.id = c.category_id
     ORDER BY c.name
   `).all();
-  const { sets, selectedSet } = selectConfigurationSet(req.query.set);
-  const configurations = loadSetConfigurations(selectedSet?.id);
+  const {
+    sets, selectedSet, configurations, shoppingList,
+  } = loadSetWithShoppingList(req.query.set);
   const editId = Number(req.query.edit);
+  const copyId = Number(req.query.copy);
   const editingConfiguration = configurations.find((item) => item.id === editId) || null;
+  // Duplizieren: Formular mit den Werten einer Position vorbelegen, gespeichert wird als neue Position
+  const copyingConfiguration = editingConfiguration
+    ? null
+    : configurations.find((item) => item.id === copyId) || null;
 
   const messages = {
-    saved: 'Kabelposition gespeichert und die Einkaufsliste aktualisiert.',
+    saved: 'Kabelposition gespeichert.',
     renamed: 'Konfiguration umbenannt.',
+    duplicated: 'Konfiguration dupliziert. Du arbeitest jetzt in der Kopie.',
   };
   const error = req.query.error === 'invalid'
     ? 'Die Angaben konnten nicht gespeichert werden. Bitte prüfe Auswahl, Länge und Menge.'
@@ -76,7 +82,10 @@ router.get('/', (req, res) => {
     sets,
     selectedSet,
     configurations,
+    shoppingList,
     editingConfiguration,
+    copyingConfiguration,
+    formValues: editingConfiguration || copyingConfiguration,
     showNewSetForm: req.query.neue_sammlung === '1',
     showRenameSetForm: req.query.sammlungsname === '1',
     message: messages[req.query.message] || '',
@@ -86,24 +95,22 @@ router.get('/', (req, res) => {
 });
 
 router.get('/export.csv', (req, res) => {
-  const { selectedSet } = selectConfigurationSet(req.query.set);
-  const configurations = loadSetConfigurations(selectedSet?.id);
+  const { selectedSet, configurations, shoppingList } = loadSetWithShoppingList(req.query.set);
   combinedCsv(
     res,
     configurations,
-    aggregateConfigurations(configurations),
+    shoppingList,
     new Date().toISOString().slice(0, 10),
     selectedSet?.name,
   );
 });
 
 router.get('/export.pdf', (req, res) => {
-  const { selectedSet } = selectConfigurationSet(req.query.set);
-  const configurations = loadSetConfigurations(selectedSet?.id);
+  const { selectedSet, configurations, shoppingList } = loadSetWithShoppingList(req.query.set);
   combinedPdf(
     res,
     configurations,
-    aggregateConfigurations(configurations),
+    shoppingList,
     new Date().toISOString().slice(0, 10),
     selectedSet?.name,
   );
@@ -124,6 +131,12 @@ router.post('/sammlungen/:id/edit', (req, res) => {
     UPDATE configuration_sets SET name = ?, updated_at = datetime('now') WHERE id = ?
   `).run(name, set.id);
   return redirectToSet(res, set.id, '&message=renamed');
+});
+
+router.post('/sammlungen/:id/duplicate', (req, res) => {
+  const newId = duplicateSet(req.params.id);
+  if (!newId) return res.redirect('/konfigurator?error=invalid');
+  return redirectToSet(res, newId, '&message=duplicated');
 });
 
 router.post('/sammlungen/:id/delete', (req, res) => {

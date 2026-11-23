@@ -107,6 +107,14 @@ db.exec(`
   );
 `);
 
+const setColumns = db.pragma('table_info(configuration_sets)');
+if (!setColumns.some((column) => column.name === 'reserve_percent')) {
+  db.exec(`
+    ALTER TABLE configuration_sets
+    ADD COLUMN reserve_percent REAL NOT NULL DEFAULT 0;
+  `);
+}
+
 const configurationColumns = db.pragma('table_info(cable_configurations)');
 if (!configurationColumns.some((column) => column.name === 'set_id')) {
   db.exec(`

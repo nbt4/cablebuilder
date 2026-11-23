@@ -1,7 +1,7 @@
 const PDFDocument = require('pdfkit');
 
 const COLORS = {
-  accent: '#e0353d',
+  accent: '#e31e24',
   border: '#d9d9de',
   header: '#f1f1f3',
   muted: '#66666f',
@@ -144,14 +144,24 @@ function configurationCsvRows(configurations) {
 function shoppingCsvRows(shoppingList) {
   return [
     ...shoppingList.cables.map((item) => [
-      'Kabel', item.name, formatNumber(item.amount), 'm',
+      'Kabel', item.name, formatNumber(item.exactAmount), formatNumber(item.amount), 'm',
       formatNumber(item.unitPrice), formatNumber(item.totalPrice), item.website || '',
     ]),
     ...shoppingList.connectors.map((item) => [
-      'Stecker', item.name, item.amount, 'Stück',
+      'Stecker', item.name, item.amount, item.amount, 'Stück',
       formatNumber(item.unitPrice), formatNumber(item.totalPrice), item.website || '',
     ]),
   ];
+}
+
+function formatCuts(cuts) {
+  return cuts.map((cut) => `${cut.count} × ${formatNumber(cut.lengthM)} m`).join(', ');
+}
+
+function cutListCsvRows(shoppingList) {
+  return shoppingList.cables.flatMap((item) => item.cuts.map((cut) => [
+    item.name, cut.count, formatNumber(cut.lengthM), formatNumber(cut.count * cut.lengthM),
+  ]));
 }
 
 function exportFilename(setName, date, extension) {
@@ -175,23 +185,29 @@ function combinedCsv(res, configurations, shoppingList, date, setName) {
     ],
     ...configurationCsvRows(configurations),
     [],
-    ['Einkaufsliste'],
-    ['Kategorie', 'Produkt', 'Benötigt', 'Einheit', 'Einzelpreis brutto (EUR)', 'Gesamt brutto (EUR)', 'Produktlink'],
+    [`Einkaufsliste (Kabelreserve ${formatNumber(shoppingList.reservePercent)} %)`],
+    ['Kategorie', 'Produkt', 'Bedarf exakt', 'Bestellmenge', 'Einheit', 'Einzelpreis brutto (EUR)', 'Gesamt brutto (EUR)', 'Produktlink'],
     ...shoppingCsvRows(shoppingList),
+    [],
+    ['Schnittliste'],
+    ['Kabel', 'Anzahl', 'Länge je Stück (m)', 'Summe (m)'],
+    ...cutListCsvRows(shoppingList),
   ]);
 }
 
 function combinedPdf(res, configurations, shoppingList, date, setName) {
   const shoppingColumns = [
     { label: 'Produkt', width: 165 },
-    { label: 'Benötigt', width: 70 },
+    { label: 'Bestellmenge', width: 80 },
     { label: 'Einzelpreis', width: 75 },
     { label: 'Summe', width: 75 },
-    { label: 'Produktlink', width: 110 },
+    { label: 'Produktlink', width: 100 },
   ];
   const shoppingRows = (items, unit) => items.map((item) => [
     { text: item.name, bold: true },
-    `${formatNumber(item.amount)} ${unit}`,
+    unit === 'm' && item.amount !== item.exactAmount
+      ? `${formatNumber(item.amount)} m (exakt ${formatNumber(item.exactAmount)} m)`
+      : `${formatNumber(item.amount)} ${unit}`,
     unit === 'm' ? `${formatMoney(item.unitPrice)}/m` : formatMoney(item.unitPrice),
     formatMoney(item.totalPrice),
     item.website ? { text: 'Produkt öffnen', link: item.website } : 'Kein Link',
@@ -201,7 +217,7 @@ function combinedPdf(res, configurations, shoppingList, date, setName) {
     filename: exportFilename(setName, date, 'pdf'),
     title: 'Kabelplanung',
     subtitle: `${setName || 'Ohne Namen'} · Stand ${new Date().toLocaleDateString('de-DE')} · ${configurations.length} ${configurations.length === 1 ? 'Kabelposition' : 'Kabelpositionen'}`,
-    summary: `Konfigurationswert: ${formatMoney(total)} · Materialbedarf: ${formatMoney(shoppingList.totalPrice)}`,
+    summary: `Konfigurationswert: ${formatMoney(total)} · Materialbedarf: ${formatMoney(shoppingList.totalPrice)}${shoppingList.reservePercent ? ` (inkl. ${formatNumber(shoppingList.reservePercent)} % Kabelreserve)` : ''}`,
     sections: [
       {
         title: 'Konfigurationsliste',
@@ -231,6 +247,19 @@ function combinedPdf(res, configurations, shoppingList, date, setName) {
         title: 'Einkaufsliste · Stecker',
         columns: shoppingColumns,
         rows: shoppingRows(shoppingList.connectors, 'Stück'),
+      },
+      {
+        title: 'Schnittliste',
+        columns: [
+          { label: 'Kabel', width: 150 },
+          { label: 'Zuschnitte', width: 265 },
+          { label: 'Summe exakt', width: 80 },
+        ],
+        rows: shoppingList.cables.map((item) => [
+          { text: item.name, bold: true },
+          formatCuts(item.cuts),
+          `${formatNumber(item.exactAmount)} m`,
+        ]),
       },
     ],
   });

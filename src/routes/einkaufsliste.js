@@ -1,27 +1,16 @@
 const express = require('express');
 const db = require('../db');
 const { sanitizeWebsite } = require('../sanitize');
-const { aggregateConfigurations } = require('../shopping-list');
-const { loadSetConfigurations, selectConfigurationSet } = require('../configuration-sets');
+const { normalizeReserve } = require('../shopping-list');
+const { loadSetWithShoppingList } = require('../configuration-sets');
 const { combinedCsv, combinedPdf } = require('../export');
 
 const router = express.Router();
 
-function loadShoppingList(requestedSetId) {
-  const { sets, selectedSet } = selectConfigurationSet(requestedSetId);
-  const configurations = loadSetConfigurations(selectedSet?.id);
-  return {
-    sets,
-    selectedSet,
-    configurations,
-    shoppingList: aggregateConfigurations(configurations),
-  };
-}
-
 router.get('/', (req, res) => {
   const {
     sets, selectedSet, configurations, shoppingList,
-  } = loadShoppingList(req.query.set);
+  } = loadSetWithShoppingList(req.query.set);
   const offers = db.prepare('SELECT * FROM shopping_list').all()
     .map((offer) => ({ ...offer, price_per_meter: offer.price / offer.length_m }))
     .sort((a, b) => a.price_per_meter - b.price_per_meter);
@@ -29,6 +18,7 @@ router.get('/', (req, res) => {
     ...shoppingList,
     sets,
     selectedSet,
+    configurations,
     configurationCount: configurations.length,
     offers,
     cheapestOfferId: offers.length > 0 ? offers[0].id : null,
@@ -37,7 +27,7 @@ router.get('/', (req, res) => {
 });
 
 router.get('/export.csv', (req, res) => {
-  const { configurations, shoppingList, selectedSet } = loadShoppingList(req.query.set);
+  const { configurations, shoppingList, selectedSet } = loadSetWithShoppingList(req.query.set);
   combinedCsv(
     res,
     configurations,
@@ -48,7 +38,7 @@ router.get('/export.csv', (req, res) => {
 });
 
 router.get('/export.pdf', (req, res) => {
-  const { configurations, shoppingList, selectedSet } = loadShoppingList(req.query.set);
+  const { configurations, shoppingList, selectedSet } = loadSetWithShoppingList(req.query.set);
   combinedPdf(
     res,
     configurations,
@@ -67,6 +57,16 @@ router.post('/', (req, res) => {
       .run(name, sanitizeWebsite(req.body.website), price, lengthM);
   }
   const setId = Number(req.body.set_id);
+  res.redirect(Number.isSafeInteger(setId) ? `/einkaufsliste?set=${setId}` : '/einkaufsliste');
+});
+
+router.post('/reserve', (req, res) => {
+  const setId = Number(req.body.set_id);
+  if (Number.isSafeInteger(setId)) {
+    db.prepare(`
+      UPDATE configuration_sets SET reserve_percent = ?, updated_at = datetime('now') WHERE id = ?
+    `).run(normalizeReserve(req.body.reserve_percent), setId);
+  }
   res.redirect(Number.isSafeInteger(setId) ? `/einkaufsliste?set=${setId}` : '/einkaufsliste');
 });
 

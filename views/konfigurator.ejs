@@ -5,170 +5,159 @@
 </head>
 <body>
   <%- include('partials/nav') %>
+  <%
+    const eur = (value) => value.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+    const num = (value, digits = 2) => value.toLocaleString('de-DE', { maximumFractionDigits: digits });
+    const money = (value) => value.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const configurationTotal = configurations.reduce((sum, item) => sum + item.total_price, 0);
+    const cableCount = configurations.reduce((sum, item) => sum + item.quantity, 0);
+  %>
 
   <main class="container">
-    <h1>Konfigurator</h1>
-    <p class="subtitle">Mehrere Kabel als benannte Konfiguration speichern und getrennt verwalten.</p>
-
-    <section class="configuration-toolbar">
-      <form method="get" action="/konfigurator" class="configuration-picker">
-        <label for="configurationSet">Konfiguration</label>
+    <div class="page-head">
+      <h1>Konfigurator</h1>
+      <form method="get" action="/konfigurator" class="set-picker">
+        <label for="configurationSet" class="label">Konfiguration</label>
         <select id="configurationSet" name="set" onchange="this.form.submit()">
           <% sets.forEach(set => { %>
             <option value="<%= set.id %>" <%= selectedSet?.id === set.id ? 'selected' : '' %>><%= set.name %> (<%= set.item_count %>)</option>
           <% }) %>
         </select>
-        <noscript><button type="submit">Öffnen</button></noscript>
+        <noscript><button type="submit" class="btn">Öffnen</button></noscript>
       </form>
-      <a href="/konfigurator?set=<%= selectedSet?.id || '' %>&amp;neue_sammlung=1" class="btn-primary">Neue Konfiguration</a>
-    </section>
+      <% if (selectedSet) { %>
+        <div class="toolbar-actions">
+          <a href="/konfigurator?set=<%= selectedSet.id %>&amp;neue_sammlung=1" class="btn btn-outline">Neu</a>
+          <form method="post" action="/konfigurator/sammlungen/<%= selectedSet.id %>/duplicate">
+            <button type="submit" class="btn btn-outline" title="Konfiguration mit allen Positionen kopieren">Duplizieren</button>
+          </form>
+          <a href="/konfigurator?set=<%= selectedSet.id %>&amp;sammlungsname=1" class="btn btn-outline">Umbenennen</a>
+          <form method="post" action="/konfigurator/sammlungen/<%= selectedSet.id %>/delete" data-confirm="Konfiguration „<%= selectedSet.name %>“ und alle enthaltenen Kabelpositionen löschen?" onsubmit="return confirm(this.dataset.confirm);">
+            <button type="submit" class="btn btn-ghost btn-danger">Löschen</button>
+          </form>
+        </div>
+      <% } %>
+    </div>
 
     <% if (showNewSetForm) { %>
-      <section class="card editor-card compact-editor">
-        <div>
-          <h2>Neue Konfiguration</h2>
-          <p class="card-description">Beginne mit einer leeren Sammlung, z.B. „Strom“ oder „Audio“.</p>
-        </div>
-        <form method="post" action="/konfigurator/sammlungen" class="compact-form">
-          <input type="text" name="name" placeholder="Name der Konfiguration" autofocus required>
-          <button type="submit">Neu starten</button>
-          <a href="/konfigurator?set=<%= selectedSet?.id || '' %>" class="btn-secondary">Abbrechen</a>
+      <section class="panel inline-editor">
+        <form method="post" action="/konfigurator/sammlungen" class="inline-form">
+          <label class="field field-grow">
+            <span class="label">Name der neuen Konfiguration</span>
+            <input type="text" name="name" placeholder="z.B. Stadtfest 2027" autofocus required>
+          </label>
+          <button type="submit" class="btn btn-primary">Anlegen</button>
+          <a href="/konfigurator?set=<%= selectedSet?.id || '' %>" class="btn btn-ghost">Abbrechen</a>
+        </form>
+      </section>
+    <% } %>
+
+    <% if (showRenameSetForm && selectedSet) { %>
+      <section class="panel inline-editor">
+        <form method="post" action="/konfigurator/sammlungen/<%= selectedSet.id %>/edit" class="inline-form">
+          <label class="field field-grow">
+            <span class="label">Neuer Name</span>
+            <input type="text" name="name" value="<%= selectedSet.name %>" autofocus required>
+          </label>
+          <button type="submit" class="btn btn-primary">Namen speichern</button>
+          <a href="/konfigurator?set=<%= selectedSet.id %>" class="btn btn-ghost">Abbrechen</a>
         </form>
       </section>
     <% } %>
 
     <% if (message) { %>
-      <p class="alert alert-success"><%= message %></p>
+      <p class="alert alert-success" role="status"><%= message %></p>
     <% } %>
     <% if (error) { %>
-      <p class="alert"><%= error %></p>
+      <p class="alert" role="alert"><%= error %></p>
     <% } %>
 
     <% if (selectedSet) { %>
-      <div class="configuration-heading">
-        <div>
-          <h2><%= selectedSet.name %></h2>
-          <p><%= configurations.length %> Kabelposition<%= configurations.length === 1 ? '' : 'en' %><% if (configurations.length > 0) { %>, zusammen <%= configurations.reduce((sum, c) => sum + c.total_price, 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }) %><% } %></p>
-        </div>
-        <div class="table-actions">
-          <a href="/konfigurator?set=<%= selectedSet.id %>&amp;sammlungsname=1" class="btn-table">Umbenennen</a>
-          <form method="post" action="/konfigurator/sammlungen/<%= selectedSet.id %>/delete" data-confirm="Konfiguration „<%= selectedSet.name %>“ und alle enthaltenen Kabelpositionen löschen?" onsubmit="return confirm(this.dataset.confirm);">
-            <button type="submit" class="btn-danger">Konfiguration löschen</button>
-          </form>
-        </div>
-      </div>
-
-      <% if (showRenameSetForm) { %>
-        <section class="card compact-editor">
-          <form method="post" action="/konfigurator/sammlungen/<%= selectedSet.id %>/edit" class="compact-form">
-            <input type="text" name="name" value="<%= selectedSet.name %>" required>
-            <button type="submit">Namen speichern</button>
-            <a href="/konfigurator?set=<%= selectedSet.id %>" class="btn-secondary">Abbrechen</a>
-          </form>
-        </section>
-      <% } %>
+      <dl class="stats">
+        <div><dt class="label">Positionen</dt><dd><%= configurations.length %></dd></div>
+        <div><dt class="label">Kabel</dt><dd><%= cableCount %> Stück</dd></div>
+        <div><dt class="label">Kabelmeter</dt><dd><%= num(shoppingList.totalExactMeters) %> m</dd></div>
+        <div><dt class="label">Stecker</dt><dd><%= shoppingList.totalConnectors %> Stück</dd></div>
+        <div><dt class="label">Wert brutto</dt><dd class="stat-strong"><%= eur(configurationTotal) %></dd></div>
+      </dl>
 
       <% if (connectors.length === 0 || cables.length === 0) { %>
-        <p class="empty">
-          Bitte zuerst unter <a href="/stammdaten">Stecker &amp; Kabel</a> mindestens einen Stecker und ein Kabel anlegen.
-        </p>
+        <section class="panel empty-state">
+          <h2>Erst Stammdaten anlegen</h2>
+          <p>Für eine Kabelposition brauchst du mindestens einen Stecker und ein Kabel.</p>
+          <a href="/stammdaten" class="btn btn-primary">Zu Stecker &amp; Kabel</a>
+        </section>
       <% } else { %>
-        <section class="card configuration-editor">
-          <div class="section-heading">
-            <div>
-              <h2><%= editingConfiguration ? 'Kabelposition bearbeiten' : 'Kabel hinzufügen' %></h2>
-              <p class="card-description"><%= editingConfiguration ? editingConfiguration.name : `Wird in „${selectedSet.name}“ gespeichert.` %></p>
-            </div>
-            <% if (editingConfiguration) { %>
-              <a href="/konfigurator?set=<%= selectedSet.id %>" class="btn-secondary">Abbrechen</a>
+        <section class="panel entry<%= editingConfiguration ? ' entry-editing' : '' %>" id="eingabe">
+          <div class="panel-head">
+            <h2>
+              <% if (editingConfiguration) { %>Position bearbeiten
+              <% } else if (copyingConfiguration) { %>Position duplizieren
+              <% } else { %>Kabel hinzufügen<% } %>
+            </h2>
+            <% if (editingConfiguration || copyingConfiguration) { %>
+              <span class="muted"><%= (editingConfiguration || copyingConfiguration).name %></span>
             <% } %>
           </div>
 
-          <form method="post" action="<%= editingConfiguration ? `/konfigurator/${editingConfiguration.id}/edit` : '/konfigurator' %>" class="builder">
+          <form method="post" action="<%= editingConfiguration ? `/konfigurator/${editingConfiguration.id}/edit` : '/konfigurator' %>" class="entry-form">
             <input type="hidden" name="set_id" value="<%= selectedSet.id %>">
-            <div class="builder-fields">
-              <label>
-                Bezeichnung (optional)
-                <input type="text" name="name" value="<%= editingConfiguration?.name_is_custom ? editingConfiguration.name : '' %>" placeholder="Leer lassen für automatische Bezeichnung">
-              </label>
 
-              <label>
-                Stecker A
-                <select id="connectorA" name="connector_a_id" required>
-                  <% connectors.forEach(connector => { %>
-                    <option value="<%= connector.id %>" <%= editingConfiguration?.connector_a_id === connector.id ? 'selected' : '' %>><%= connector.name %> (<%= connector.price.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %> €)</option>
-                  <% }) %>
-                </select>
-              </label>
+            <label class="field field-a">
+              <span class="label">Stecker A</span>
+              <select id="connectorA" name="connector_a_id" required>
+                <% connectors.forEach(connector => { %>
+                  <option value="<%= connector.id %>" <%= formValues?.connector_a_id === connector.id ? 'selected' : '' %>><%= connector.name %> – <%= eur(connector.price) %></option>
+                <% }) %>
+              </select>
+            </label>
 
-              <label>
-                Stecker B
-                <select id="connectorB" name="connector_b_id" required>
-                  <% connectors.forEach(connector => { %>
-                    <option value="<%= connector.id %>" <%= editingConfiguration?.connector_b_id === connector.id ? 'selected' : '' %>><%= connector.name %> (<%= connector.price.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %> €)</option>
-                  <% }) %>
-                </select>
-              </label>
+            <button type="button" class="btn btn-outline btn-swap" id="swapConnectors" title="Stecker A und B tauschen" aria-label="Stecker A und B tauschen">⇄</button>
 
-              <label>
-                Kabeltyp
-                <select id="cableType" name="cable_id" required>
-                  <% cables.forEach(cable => { %>
-                    <option value="<%= cable.id %>" <%= editingConfiguration?.cable_id === cable.id ? 'selected' : '' %>><%= cable.name %><%= cable.category_name ? ` · ${cable.category_name}` : '' %> (<%= cable.price_per_meter.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %> €/m)</option>
-                  <% }) %>
-                </select>
-              </label>
+            <label class="field field-b">
+              <span class="label">Stecker B</span>
+              <select id="connectorB" name="connector_b_id" required>
+                <% connectors.forEach(connector => { %>
+                  <option value="<%= connector.id %>" <%= formValues?.connector_b_id === connector.id ? 'selected' : '' %>><%= connector.name %> – <%= eur(connector.price) %></option>
+                <% }) %>
+              </select>
+            </label>
 
-              <label>
-                Länge (m)
-                <input type="number" id="length" name="length_m" step="0.1" min="0.1" value="<%= editingConfiguration?.length_m || 1 %>" required>
-              </label>
+            <label class="field field-cable">
+              <span class="label">Kabel</span>
+              <select id="cableType" name="cable_id" required>
+                <% cables.forEach(cable => { %>
+                  <option value="<%= cable.id %>" <%= formValues?.cable_id === cable.id ? 'selected' : '' %>><%= cable.name %><%= cable.category_name ? ` (${cable.category_name})` : '' %> – <%= eur(cable.price_per_meter) %>/m</option>
+                <% }) %>
+              </select>
+            </label>
 
-              <label>
-                Menge
-                <input type="number" id="quantity" name="quantity" step="1" min="1" value="<%= editingConfiguration?.quantity || 1 %>" required>
-              </label>
-            </div>
+            <label class="field field-length">
+              <span class="label">Länge m</span>
+              <input type="number" id="length" name="length_m" step="0.1" min="0.1" inputmode="decimal" value="<%= formValues?.length_m || 1 %>" required>
+            </label>
 
-            <div class="builder-preview">
-              <figure class="cable-diagram" aria-label="Vorschau des Kabels">
-                <svg viewBox="0 0 600 190" role="img" aria-hidden="true">
-                  <g class="plug">
-                    <rect class="plug-pins" x="14" y="80" width="18" height="30" rx="3"/>
-                    <rect class="plug-body" x="30" y="66" width="62" height="58" rx="10"/>
-                    <path class="plug-boot" d="M90 74 L118 86 L118 104 L90 116 Z"/>
-                    <rect class="plug-ring" x="44" y="66" width="7" height="58"/>
-                  </g>
-                  <path id="cableWire" class="wire" d="M118 95 C 230 140, 370 140, 482 95"/>
-                  <g class="plug" transform="translate(600 0) scale(-1 1)">
-                    <rect class="plug-pins" x="14" y="80" width="18" height="30" rx="3"/>
-                    <rect class="plug-body" x="30" y="66" width="62" height="58" rx="10"/>
-                    <path class="plug-boot" d="M90 74 L118 86 L118 104 L90 116 Z"/>
-                    <rect class="plug-ring" x="44" y="66" width="7" height="58"/>
-                  </g>
-                </svg>
-                <figcaption class="diagram-labels">
-                  <span class="diagram-end"><small>A</small> <span id="labelConnectorA">–</span></span>
-                  <span class="diagram-cable">
-                    <strong id="labelLength">–</strong>
-                    <span id="labelCable">–</span>
-                  </span>
-                  <span class="diagram-end diagram-end-b"><small>B</small> <span id="labelConnectorB">–</span></span>
-                </figcaption>
-              </figure>
+            <label class="field field-qty">
+              <span class="label">Menge</span>
+              <input type="number" id="quantity" name="quantity" step="1" min="1" inputmode="numeric" value="<%= formValues?.quantity || 1 %>" required>
+            </label>
 
-              <dl class="price-summary">
-                <div>
-                  <dt>Pro Kabel</dt>
-                  <dd id="unitPrice">–</dd>
-                </div>
-                <div class="price-total">
-                  <dt>Gesamt brutto <span id="labelQuantity" class="qty-tag"></span></dt>
-                  <dd id="totalPrice">–</dd>
-                </div>
+            <label class="field field-name">
+              <span class="label">Bezeichnung (optional)</span>
+              <input type="text" name="name" value="<%= formValues?.name_is_custom ? formValues.name : '' %>" placeholder="Leer lassen für automatische Bezeichnung">
+            </label>
+
+            <div class="entry-footer">
+              <dl class="entry-price">
+                <div><dt class="label">Pro Kabel</dt><dd id="unitPrice">–</dd></div>
+                <div><dt class="label">Gesamt</dt><dd id="totalPrice" class="stat-strong">–</dd></div>
               </dl>
-
-              <button type="submit" class="builder-submit"><%= editingConfiguration ? 'Änderungen speichern' : 'Zur Konfiguration hinzufügen' %></button>
+              <div class="entry-actions">
+                <% if (editingConfiguration || copyingConfiguration) { %>
+                  <a href="/konfigurator?set=<%= selectedSet.id %>" class="btn btn-ghost">Abbrechen</a>
+                <% } %>
+                <button type="submit" class="btn btn-primary"><%= editingConfiguration ? 'Änderungen speichern' : 'Position hinzufügen' %></button>
+              </div>
             </div>
           </form>
         </section>
@@ -180,56 +169,74 @@
         <script src="/js/konfigurator.js"></script>
       <% } %>
 
-      <section class="card saved-configurations">
-        <div class="section-heading">
-          <div>
-            <h2>Kabel in „<%= selectedSet.name %>“</h2>
-            <p class="card-description">Nur diese Positionen fließen in die zugehörige Einkaufsliste ein.</p>
-          </div>
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Positionen</h2>
           <% if (configurations.length > 0) { %>
-            <div class="export-actions">
-              <a href="/konfigurator/export.csv?set=<%= selectedSet.id %>" class="btn-secondary" download>Gesamtexport CSV</a>
-              <a href="/konfigurator/export.pdf?set=<%= selectedSet.id %>" class="btn-secondary" download>Gesamtexport PDF</a>
-              <a href="/einkaufsliste?set=<%= selectedSet.id %>" class="btn-secondary">Einkaufsliste öffnen</a>
+            <div class="toolbar-actions">
+              <a href="/einkaufsliste?set=<%= selectedSet.id %>" class="btn btn-outline">Einkaufsliste</a>
+              <a href="/konfigurator/export.csv?set=<%= selectedSet.id %>" class="btn btn-ghost" download>CSV</a>
+              <a href="/konfigurator/export.pdf?set=<%= selectedSet.id %>" class="btn btn-ghost" download>PDF</a>
             </div>
           <% } %>
         </div>
 
         <div class="table-scroll">
-          <table>
+          <table class="data-table stack-mobile">
             <thead>
-              <tr><th>Bezeichnung</th><th>Aufbau</th><th class="num">Länge</th><th class="num">Menge</th><th class="num">Gesamt</th><th><span class="sr-only">Aktionen</span></th></tr>
+              <tr>
+                <th>Kabel</th>
+                <th class="num">Länge</th>
+                <th>Stecker A</th>
+                <th>Stecker B</th>
+                <th class="num">Menge</th>
+                <th class="num">Einzel</th>
+                <th class="num">Gesamt</th>
+                <th><span class="sr-only">Aktionen</span></th>
+              </tr>
             </thead>
             <tbody>
               <% configurations.forEach(configuration => { %>
-                <tr>
-                  <td><strong><%= configuration.name %></strong></td>
-                  <td>
-                    <span class="build-path">
-                      <span class="build-plug"><%= configuration.connector_a_name %></span>
-                      <span class="build-wire"><%= configuration.cable_name %></span>
-                      <span class="build-plug"><%= configuration.connector_b_name %></span>
-                    </span>
+                <tr class="<%= editingConfiguration?.id === configuration.id ? 'is-editing' : '' %>">
+                  <td class="cell-name">
+                    <%= configuration.cable_name %>
+                    <% if (configuration.name_is_custom) { %><span class="cell-sub"><%= configuration.name %></span><% } %>
                   </td>
-                  <td class="num"><%= configuration.length_m.toLocaleString('de-DE') %> m</td>
-                  <td class="num"><%= configuration.quantity %> ×</td>
-                  <td class="num amount"><%= configuration.total_price.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }) %></td>
+                  <td class="num strong" data-label="Länge"><%= num(configuration.length_m) %> m</td>
+                  <td data-label="Stecker A"><%= configuration.connector_a_name %></td>
+                  <td data-label="Stecker B"><%= configuration.connector_b_name %></td>
+                  <td class="num" data-label="Menge"><%= configuration.quantity %></td>
+                  <td class="num" data-label="Einzel"><%= money(configuration.unit_price) %></td>
+                  <td class="num strong" data-label="Gesamt"><%= money(configuration.total_price) %></td>
                   <td>
-                    <div class="table-actions">
-                      <a href="/konfigurator?set=<%= selectedSet.id %>&amp;edit=<%= configuration.id %>" class="btn-table">Bearbeiten</a>
+                    <div class="row-actions">
+                      <a href="/konfigurator?set=<%= selectedSet.id %>&amp;edit=<%= configuration.id %>#eingabe" class="btn btn-ghost btn-sm">Bearbeiten</a>
+                      <a href="/konfigurator?set=<%= selectedSet.id %>&amp;copy=<%= configuration.id %>#eingabe" class="btn btn-ghost btn-sm">Duplizieren</a>
                       <form method="post" action="/konfigurator/<%= configuration.id %>/delete" onsubmit="return confirm('Kabelposition löschen?');">
-                        <button type="submit" class="btn-danger">Löschen</button>
+                        <button type="submit" class="btn btn-ghost btn-sm btn-danger">Löschen</button>
                       </form>
                     </div>
                   </td>
                 </tr>
               <% }) %>
               <% if (configurations.length === 0) { %>
-                <tr><td colspan="6" class="empty">Diese Konfiguration ist noch leer. Füge oben das erste Kabel hinzu.</td></tr>
+                <tr><td colspan="9" class="empty">Noch keine Positionen. Lege oben das erste Kabel an.</td></tr>
               <% } %>
             </tbody>
+            <% if (configurations.length > 0) { %>
+              <tfoot>
+                <tr>
+                  <td colspan="4">Summe</td>
+                  <td class="num" data-label="Kabel"><%= cableCount %></td>
+                  <td></td>
+                  <td class="num strong" data-label="Gesamt"><%= money(configurationTotal) %></td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            <% } %>
           </table>
         </div>
+        <p class="table-note">Preise brutto in Euro.</p>
       </section>
     <% } %>
   </main>

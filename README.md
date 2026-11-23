@@ -4,13 +4,15 @@ Kleines Tool zur Kabelkalkulation:
 
 - **Stecker & Kabel**: Stammdaten mit Name, Website sowie Netto- oder Bruttopreis (Kabel: Preis/m) pflegen; der jeweils andere Preis wird mit 19 % MwSt. berechnet
 - **Kabelkategorien**: Eigene Kategorien mit individuellen Zusatzfeldern anlegen, z.B. „Strom“ mit „Querschnitt“ und „Aderanzahl“
-- **Konfigurator**: Benannte Konfigurationen wie „Strom“ oder „Audio“ anlegen und darin mehrere Kabelpositionen speichern und bearbeiten
+- **Konfigurator**: Benannte Konfigurationen wie „Strom“ oder „Audio“ anlegen, duplizieren und darin Kabelpositionen speichern, bearbeiten und duplizieren; Stecker A/B per Klick tauschen
 - **Einkaufsliste**: benötigte Kabelmeter und Stecker der ausgewählten Konfiguration automatisch zusammenfassen – inklusive direkter Links zu den Produkten
-- **Export**: Konfigurationsliste und daraus berechnete Einkaufsliste gemeinsam als CSV oder PDF herunterladen
+- **Reserve**: pro Konfiguration ein Verschnittzuschlag in % auf die Kabelmeter (Bestellmenge auf 10 cm aufgerundet)
+- **Schnittliste**: Zuschnitte je Kabeltyp, längste zuerst – zum Ablängen in der Werkstatt
+- **Export**: Konfigurationsliste, Einkaufsliste und Schnittliste gemeinsam als CSV oder PDF herunterladen
 
 Änderungen an Namen, Preisen und Produktlinks von Kabeln oder Steckern werden automatisch in alle verknüpften Konfigurationen übernommen.
 
-Dark Theme mit roten Akzenten.
+Design im Stil von tsunami-events.de (Schriften Clash Display, Satoshi und JetBrains Mono liegen unter `public/fonts`). Auf dem Handy werden die Tabellen als beschriftete Blöcke dargestellt.
 
 ## Betrieb per Docker
 
