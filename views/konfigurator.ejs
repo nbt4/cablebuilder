@@ -52,7 +52,7 @@
         </div>
         <div class="table-actions">
           <a href="/konfigurator?set=<%= selectedSet.id %>&amp;sammlungsname=1" class="btn-table">Umbenennen</a>
-          <form method="post" action="/konfigurator/sammlungen/<%= selectedSet.id %>/delete" onsubmit="return confirm('Konfiguration „<%= selectedSet.name %>“ und alle enthaltenen Kabelpositionen löschen?');">
+          <form method="post" action="/konfigurator/sammlungen/<%= selectedSet.id %>/delete" data-confirm="Konfiguration „<%= selectedSet.name %>“ und alle enthaltenen Kabelpositionen löschen?" onsubmit="return confirm(this.dataset.confirm);">
             <button type="submit" class="btn-danger">Konfiguration löschen</button>
           </form>
         </div>

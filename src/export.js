@@ -20,8 +20,15 @@ function formatMoney(value) {
   });
 }
 
+// Zellen, die Tabellenprogramme als Formel lesen würden (=, +, -, @, Tab, CR)
+const FORMULA_START = /^[=+\-@\t\r]/;
+
 function escapeCsv(value) {
-  const text = value === undefined || value === null ? '' : String(value);
+  let text = value === undefined || value === null ? '' : String(value);
+  // Formel-Injection verhindern; echte Zahlen (z.B. -1.5) bleiben unverändert
+  if (typeof value !== 'number' && FORMULA_START.test(text)) {
+    text = `'${text}`;
+  }
   return `"${text.replace(/"/g, '""')}"`;
 }
 
