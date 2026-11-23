@@ -1,8 +1,14 @@
 <header class="topbar">
-  <div class="brand">🔌 cablebuilder</div>
-  <nav>
-    <a href="/konfigurator" class="<%= active === 'konfigurator' ? 'active' : '' %>">Konfigurator</a>
-    <a href="/stammdaten" class="<%= active === 'stammdaten' ? 'active' : '' %>">Stecker &amp; Kabel</a>
-    <a href="/einkaufsliste" class="<%= active === 'einkaufsliste' ? 'active' : '' %>">Einkaufsliste</a>
+  <a href="/konfigurator" class="brand" aria-label="cablebuilder Startseite">
+    <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+      <rect width="32" height="32" rx="7"/>
+      <path d="M6 20c6 0 6-8 10-8s4 8 10 8"/>
+    </svg>
+    <span>cablebuilder</span>
+  </a>
+  <nav class="main-nav" aria-label="Hauptnavigation">
+    <a href="/konfigurator" class="<%= active === 'konfigurator' ? 'active' : '' %>" <%- active === 'konfigurator' ? 'aria-current="page"' : '' %>>Konfigurator</a>
+    <a href="/stammdaten" class="<%= active === 'stammdaten' ? 'active' : '' %>" <%- active === 'stammdaten' ? 'aria-current="page"' : '' %>>Stecker &amp; Kabel</a>
+    <a href="/einkaufsliste" class="<%= active === 'einkaufsliste' ? 'active' : '' %>" <%- active === 'einkaufsliste' ? 'aria-current="page"' : '' %>>Einkaufsliste</a>
   </nav>
 </header>

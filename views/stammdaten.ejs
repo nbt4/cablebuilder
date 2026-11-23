@@ -8,83 +8,314 @@
 
   <main class="container">
     <h1>Stecker &amp; Kabel</h1>
-    <p class="subtitle">Stammdaten für den Konfigurator pflegen.</p>
+    <p class="subtitle">Produkte und ihre Kategorien zentral verwalten. Netto- und Bruttopreise werden mit <%= vatRate * 100 %> % MwSt. synchronisiert.</p>
 
-    <div class="grid-2">
-      <section class="card">
-        <h2>Stecker</h2>
-        <form method="post" action="/stammdaten/stecker" class="form-row">
-          <input type="text" name="name" placeholder="Name (z.B. XLR male)" required>
-          <input type="url" name="website" placeholder="Website (optional)">
-          <input type="number" step="0.01" min="0" name="price" placeholder="Preis €" required>
-          <button type="submit">Hinzufügen</button>
-        </form>
+    <nav class="section-tabs" aria-label="Stammdatenbereich">
+      <a href="/stammdaten?bereich=kabel" class="<%= selectedArea === 'kabel' ? 'active' : '' %>">Kabel <span class="count"><%= cables.length %></span></a>
+      <a href="/stammdaten?bereich=stecker" class="<%= selectedArea === 'stecker' ? 'active' : '' %>">Stecker <span class="count"><%= connectors.length %></span></a>
+    </nav>
 
-        <table>
-          <thead>
-            <tr><th>Name</th><th>Website</th><th>Preis</th><th></th></tr>
-          </thead>
-          <tbody>
-            <% connectors.forEach(c => { %>
-              <tr>
-                <td><%= c.name %></td>
-                <td>
-                  <% if (c.website) { %>
-                    <a href="<%= c.website %>" target="_blank" rel="noopener">Link</a>
-                  <% } %>
-                </td>
-                <td><%= c.price.toFixed(2) %> €</td>
-                <td>
-                  <form method="post" action="/stammdaten/stecker/<%= c.id %>/delete" onsubmit="return confirm('Stecker löschen?');">
-                    <button type="submit" class="btn-danger">Löschen</button>
-                  </form>
-                </td>
-              </tr>
-            <% }) %>
-            <% if (connectors.length === 0) { %>
-              <tr><td colspan="4" class="empty">Noch keine Stecker angelegt.</td></tr>
+    <% if (error) { %>
+      <p class="alert"><%= error %></p>
+    <% } %>
+
+    <% if (selectedArea === 'kabel') { %>
+      <section class="management-section">
+        <div class="management-heading">
+          <div>
+            <h2>Kabel</h2>
+            <p>Meterware mit Kategorie, Eigenschaften und Produktlink.</p>
+          </div>
+          <a href="/stammdaten?bereich=kabel&amp;neu=1" class="btn-primary">Neues Kabel</a>
+        </div>
+
+        <% if (showCreateForm || editCable) { %>
+          <section class="card editor-card">
+            <div class="section-heading">
+              <div>
+                <h2><%= editCable ? 'Kabel bearbeiten' : 'Neues Kabel anlegen' %></h2>
+                <p class="card-description"><%= editCable ? editCable.name : 'Alle Pflichtfelder ausfüllen und speichern.' %></p>
+              </div>
+              <a href="/stammdaten?bereich=kabel" class="btn-secondary">Abbrechen</a>
+            </div>
+
+            <% if (categories.length === 0) { %>
+              <p class="empty">Lege zuerst unten eine Kabelkategorie an.</p>
+            <% } else { %>
+              <form method="post" action="<%= editCable ? `/stammdaten/kabel/${editCable.id}/edit` : '/stammdaten/kabel' %>" class="entity-form price-form" data-price-form data-vat-rate="<%= vatRate %>">
+                <div class="form-grid">
+                  <label>
+                    Name
+                    <input type="text" name="name" value="<%= editCable?.name || '' %>" placeholder="z.B. H07RN-F" required>
+                  </label>
+                  <label>
+                    Website (optional)
+                    <input type="url" name="website" value="<%= editCable?.website || '' %>" placeholder="https://…">
+                  </label>
+                  <label>
+                    Kategorie
+                    <select name="category_id" data-cable-category required>
+                      <% categories.forEach(category => { %>
+                        <option value="<%= category.id %>" <%= editCable?.category_id === category.id ? 'selected' : '' %>><%= category.name %></option>
+                      <% }) %>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="price-fields editor-price-fields">
+                  <label>
+                    Netto/m
+                    <input type="number" step="0.01" min="0" name="net_price_per_meter" value="<%= editCable ? editCable.net_price_per_meter.toFixed(2) : '' %>" placeholder="0,00 €" data-net-price>
+                  </label>
+                  <label>
+                    Brutto/m
+                    <input type="number" step="0.01" min="0" name="gross_price_per_meter" value="<%= editCable ? editCable.price_per_meter.toFixed(2) : '' %>" placeholder="0,00 €" data-gross-price>
+                  </label>
+                </div>
+
+                <div class="custom-fields" data-custom-fields></div>
+                <input type="hidden" name="price_basis" value="<%= editCable ? 'gross' : '' %>" data-price-basis>
+                <div class="form-actions">
+                  <button type="submit"><%= editCable ? 'Änderungen speichern' : 'Kabel anlegen' %></button>
+                </div>
+              </form>
             <% } %>
-          </tbody>
-        </table>
-      </section>
+          </section>
+        <% } %>
 
-      <section class="card">
-        <h2>Kabel</h2>
-        <form method="post" action="/stammdaten/kabel" class="form-row">
-          <input type="text" name="name" placeholder="Name (z.B. CAT7 S/FTP)" required>
-          <input type="url" name="website" placeholder="Website (optional)">
-          <input type="number" step="0.01" min="0" name="price_per_meter" placeholder="Preis €/m" required>
-          <button type="submit">Hinzufügen</button>
-        </form>
+        <section class="card list-card">
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr><th>Name</th><th>Kategorie</th><th>Eigenschaften</th><th>Website</th><th class="num">Netto/m</th><th class="num">Brutto/m</th><th><span class="sr-only">Aktionen</span></th></tr>
+              </thead>
+              <tbody>
+                <% cables.forEach(cable => { %>
+                  <tr>
+                    <td><strong><%= cable.name %></strong></td>
+                    <td><%= cable.category_name || '–' %></td>
+                    <td>
+                      <% if (cable.custom_fields.length > 0) { %>
+                        <dl class="cable-details">
+                          <% cable.custom_fields.forEach(field => { %>
+                            <div><dt><%= field.name %>:</dt><dd><%= field.value %></dd></div>
+                          <% }) %>
+                        </dl>
+                      <% } else { %>–<% } %>
+                    </td>
+                    <td>
+                      <% if (cable.website) { %>
+                        <a href="<%= cable.website %>" target="_blank" rel="noopener">Produktseite</a>
+                      <% } else { %>–<% } %>
+                    </td>
+                    <td class="num"><%= cable.net_price_per_meter.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %> €/m</td>
+                    <td class="num"><%= cable.price_per_meter.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %> €/m</td>
+                    <td>
+                      <div class="table-actions">
+                        <a href="/stammdaten?bereich=kabel&amp;edit=<%= cable.id %>" class="btn-table">Bearbeiten</a>
+                        <form method="post" action="/stammdaten/kabel/<%= cable.id %>/delete" onsubmit="return confirm('Kabel löschen? Gespeicherte Konfigurationen behalten ihre Produktdaten.');">
+                          <button type="submit" class="btn-danger">Löschen</button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                <% }) %>
+                <% if (cables.length === 0) { %>
+                  <tr><td colspan="7" class="empty">Noch keine Kabel angelegt.</td></tr>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </section>
 
-        <table>
-          <thead>
-            <tr><th>Name</th><th>Website</th><th>Preis/m</th><th></th></tr>
-          </thead>
-          <tbody>
-            <% cables.forEach(c => { %>
-              <tr>
-                <td><%= c.name %></td>
-                <td>
-                  <% if (c.website) { %>
-                    <a href="<%= c.website %>" target="_blank" rel="noopener">Link</a>
-                  <% } %>
-                </td>
-                <td><%= c.price_per_meter.toFixed(2) %> €/m</td>
-                <td>
-                  <form method="post" action="/stammdaten/kabel/<%= c.id %>/delete" onsubmit="return confirm('Kabel löschen?');">
-                    <button type="submit" class="btn-danger">Löschen</button>
-                  </form>
-                </td>
-              </tr>
+        <section class="card categories-card subsection-card">
+          <div class="subsection-heading">
+            <div>
+              <h2>Kabelkategorien</h2>
+              <p class="card-description">Kategorien und individuelle Zusatzfelder für Kabel verwalten.</p>
+            </div>
+            <form method="post" action="/stammdaten/kategorie" class="compact-form">
+              <input type="text" name="name" placeholder="Neue Kategorie, z.B. Strom" required>
+              <button type="submit">Anlegen</button>
+            </form>
+          </div>
+
+          <div class="category-list category-grid">
+            <% categories.forEach(category => { %>
+              <article class="category-item">
+                <div class="category-header">
+                  <strong><%= category.name %></strong>
+                  <div class="category-actions">
+                    <span class="category-use"><%= category.cable_count %> Kabel</span>
+                    <% if (category.cable_count === 0) { %>
+                      <form method="post" action="/stammdaten/kategorie/<%= category.id %>/delete" onsubmit="return confirm('Kategorie und ihre Felder löschen?');">
+                        <button type="submit" class="btn-icon" title="Kategorie löschen" aria-label="Kategorie <%= category.name %> löschen">×</button>
+                      </form>
+                    <% } %>
+                  </div>
+                </div>
+
+                <div class="category-field-list">
+                  <% category.fields.forEach(field => { %>
+                    <span class="field-chip">
+                      <%= field.name %>
+                      <form method="post" action="/stammdaten/kategorie/<%= category.id %>/feld/<%= field.id %>/delete" onsubmit="return confirm('Feld und alle eingetragenen Werte löschen?');">
+                        <button type="submit" title="Feld löschen" aria-label="Feld <%= field.name %> löschen">×</button>
+                      </form>
+                    </span>
+                  <% }) %>
+                  <% if (category.fields.length === 0) { %><span class="muted">Keine Zusatzfelder</span><% } %>
+                </div>
+
+                <form method="post" action="/stammdaten/kategorie/<%= category.id %>/feld" class="compact-form field-form">
+                  <input type="text" name="name" placeholder="Neues Feld, z.B. Querschnitt" required>
+                  <button type="submit">Feld hinzufügen</button>
+                </form>
+              </article>
             <% }) %>
-            <% if (cables.length === 0) { %>
-              <tr><td colspan="4" class="empty">Noch keine Kabel angelegt.</td></tr>
-            <% } %>
-          </tbody>
-        </table>
+            <% if (categories.length === 0) { %><p class="empty">Noch keine Kabelkategorien angelegt.</p><% } %>
+          </div>
+        </section>
       </section>
-    </div>
+    <% } else { %>
+      <section class="management-section">
+        <div class="management-heading">
+          <div>
+            <h2>Stecker</h2>
+            <p>Steckertypen mit Kategorie, Preis und Produktlink.</p>
+          </div>
+          <a href="/stammdaten?bereich=stecker&amp;neu=1" class="btn-primary">Neuer Stecker</a>
+        </div>
+
+        <% if (showCreateForm || editConnector) { %>
+          <section class="card editor-card">
+            <div class="section-heading">
+              <div>
+                <h2><%= editConnector ? 'Stecker bearbeiten' : 'Neuen Stecker anlegen' %></h2>
+                <p class="card-description"><%= editConnector ? editConnector.name : 'Kategorie, Produktdaten und Preis eintragen.' %></p>
+              </div>
+              <a href="/stammdaten?bereich=stecker" class="btn-secondary">Abbrechen</a>
+            </div>
+
+            <form method="post" action="<%= editConnector ? `/stammdaten/stecker/${editConnector.id}/edit` : '/stammdaten/stecker' %>" class="entity-form price-form" data-price-form data-vat-rate="<%= vatRate %>">
+              <div class="form-grid">
+                <label>
+                  Name
+                  <input type="text" name="name" value="<%= editConnector?.name || '' %>" placeholder="z.B. XLR male" required>
+                </label>
+                <label>
+                  Website (optional)
+                  <input type="url" name="website" value="<%= editConnector?.website || '' %>" placeholder="https://…">
+                </label>
+                <label>
+                  Kategorie (optional)
+                  <select name="category_id">
+                    <option value="">Ohne Kategorie</option>
+                    <% connectorCategories.forEach(category => { %>
+                      <option value="<%= category.id %>" <%= editConnector?.category_id === category.id ? 'selected' : '' %>><%= category.name %></option>
+                    <% }) %>
+                  </select>
+                </label>
+              </div>
+
+              <div class="price-fields editor-price-fields">
+                <label>
+                  Netto
+                  <input type="number" step="0.01" min="0" name="net_price" value="<%= editConnector ? editConnector.net_price.toFixed(2) : '' %>" placeholder="0,00 €" data-net-price>
+                </label>
+                <label>
+                  Brutto
+                  <input type="number" step="0.01" min="0" name="gross_price" value="<%= editConnector ? editConnector.price.toFixed(2) : '' %>" placeholder="0,00 €" data-gross-price>
+                </label>
+              </div>
+              <input type="hidden" name="price_basis" value="<%= editConnector ? 'gross' : '' %>" data-price-basis>
+              <div class="form-actions">
+                <button type="submit"><%= editConnector ? 'Änderungen speichern' : 'Stecker anlegen' %></button>
+              </div>
+            </form>
+          </section>
+        <% } %>
+
+        <section class="card list-card">
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr><th>Name</th><th>Kategorie</th><th>Website</th><th class="num">Netto</th><th class="num">Brutto</th><th><span class="sr-only">Aktionen</span></th></tr>
+              </thead>
+              <tbody>
+                <% connectors.forEach(connector => { %>
+                  <tr>
+                    <td><strong><%= connector.name %></strong></td>
+                    <td><%= connector.category_name || '–' %></td>
+                    <td>
+                      <% if (connector.website) { %>
+                        <a href="<%= connector.website %>" target="_blank" rel="noopener">Produktseite</a>
+                      <% } else { %>–<% } %>
+                    </td>
+                    <td class="num"><%= connector.net_price.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %> €</td>
+                    <td class="num"><%= connector.price.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %> €</td>
+                    <td>
+                      <div class="table-actions">
+                        <a href="/stammdaten?bereich=stecker&amp;edit=<%= connector.id %>" class="btn-table">Bearbeiten</a>
+                        <form method="post" action="/stammdaten/stecker/<%= connector.id %>/delete" onsubmit="return confirm('Stecker löschen? Gespeicherte Konfigurationen behalten ihre Produktdaten.');">
+                          <button type="submit" class="btn-danger">Löschen</button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                <% }) %>
+                <% if (connectors.length === 0) { %>
+                  <tr><td colspan="6" class="empty">Noch keine Stecker angelegt.</td></tr>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card categories-card subsection-card">
+          <div class="subsection-heading">
+            <div>
+              <h2>Steckerkategorien</h2>
+              <p class="card-description">Stecker beispielsweise nach XLR, PowerCON oder Klinke gruppieren.</p>
+            </div>
+            <form method="post" action="/stammdaten/stecker-kategorie" class="compact-form">
+              <input type="text" name="name" placeholder="Neue Kategorie, z.B. XLR" required>
+              <button type="submit">Anlegen</button>
+            </form>
+          </div>
+
+          <div class="category-list category-grid">
+            <% connectorCategories.forEach(category => { %>
+              <article class="category-item simple-category-item">
+                <div class="category-header">
+                  <strong><%= category.name %></strong>
+                  <div class="category-actions">
+                    <span class="category-use"><%= category.connector_count %> Stecker</span>
+                    <% if (category.connector_count === 0) { %>
+                      <form method="post" action="/stammdaten/stecker-kategorie/<%= category.id %>/delete" onsubmit="return confirm('Steckerkategorie löschen?');">
+                        <button type="submit" class="btn-icon" title="Kategorie löschen" aria-label="Kategorie <%= category.name %> löschen">×</button>
+                      </form>
+                    <% } %>
+                  </div>
+                </div>
+              </article>
+            <% }) %>
+            <% if (connectorCategories.length === 0) { %><p class="empty">Noch keine Steckerkategorien angelegt.</p><% } %>
+          </div>
+        </section>
+      </section>
+    <% } %>
   </main>
+
+  <% if (selectedArea === 'kabel' && (showCreateForm || editCable) && categories.length > 0) { %>
+    <script>
+      window.CABLEBUILDER_CATEGORIES = <%- JSON.stringify(categories).replace(/</g, '\\u003c') %>;
+      window.CABLEBUILDER_EDIT_CABLE = <%- JSON.stringify(editCable).replace(/</g, '\\u003c') %>;
+    </script>
+    <script src="/js/kabelfelder.js"></script>
+  <% } %>
+  <% if (showCreateForm || editCable || editConnector) { %>
+    <script src="/js/preisfelder.js"></script>
+  <% } %>
 </body>
 </html>

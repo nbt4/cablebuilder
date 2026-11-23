@@ -8,48 +8,163 @@
 
   <main class="container">
     <h1>Einkaufsliste</h1>
-    <p class="subtitle">Gefundene Kabel-Angebote sammeln und nach Preis/m vergleichen.</p>
+    <p class="subtitle">Materialbedarf für „<%= selectedSet?.name || 'Meine Konfiguration' %>“ aus <%= configurationCount %> Kabelposition<%= configurationCount === 1 ? '' : 'en' %>.</p>
 
-    <section class="card">
+    <section class="configuration-toolbar shopping-list-toolbar">
+      <form method="get" action="/einkaufsliste" class="configuration-picker">
+        <label for="shoppingConfigurationSet">Konfiguration</label>
+        <select id="shoppingConfigurationSet" name="set" onchange="this.form.submit()">
+          <% sets.forEach(set => { %>
+            <option value="<%= set.id %>" <%= selectedSet?.id === set.id ? 'selected' : '' %>><%= set.name %> (<%= set.item_count %>)</option>
+          <% }) %>
+        </select>
+        <noscript><button type="submit">Öffnen</button></noscript>
+      </form>
+      <a href="/konfigurator?set=<%= selectedSet?.id || '' %>" class="btn-secondary">Konfiguration bearbeiten</a>
+    </section>
+
+    <% if (configurationCount > 0) { %>
+      <div class="export-actions page-actions">
+        <a href="/einkaufsliste/export.csv?set=<%= selectedSet.id %>" class="btn-secondary" download>Gesamtexport CSV</a>
+        <a href="/einkaufsliste/export.pdf?set=<%= selectedSet.id %>" class="btn-secondary" download>Gesamtexport PDF</a>
+      </div>
+    <% } %>
+
+    <% if (configurationCount === 0) { %>
+      <section class="card empty-state">
+        <h2>Noch nichts einzukaufen</h2>
+        <p>Speichere zuerst mindestens eine Kabel-Konfiguration. Die benötigten Kabelmeter und Stecker werden hier anschließend zusammengefasst.</p>
+        <a href="/konfigurator?set=<%= selectedSet?.id || '' %>" class="btn-primary">Kabel hinzufügen</a>
+      </section>
+    <% } else { %>
+      <section class="shopping-summary" aria-label="Zusammenfassung">
+        <div class="summary-total">
+          <span>Geschätzter Materialpreis brutto</span>
+          <strong><%= totalPrice.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }) %></strong>
+        </div>
+        <dl class="summary-facts">
+          <div><dt>Kabel gesamt</dt><dd><%= cables.reduce((sum, item) => sum + item.amount, 0).toLocaleString('de-DE', { maximumFractionDigits: 2 }) %> m</dd></div>
+          <div><dt>Stecker gesamt</dt><dd><%= connectors.reduce((sum, item) => sum + item.amount, 0) %> Stück</dd></div>
+          <div><dt>Positionen</dt><dd><%= configurationCount %></dd></div>
+        </dl>
+      </section>
+
+      <section class="card shopping-card">
+        <div class="section-heading">
+          <div>
+            <h2>Kabel</h2>
+            <p class="card-description">Benötigte Gesamtlänge je Kabeltyp.</p>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr><th>Produkt</th><th class="num">Benötigt</th><th class="num">Preis/m</th><th class="num">Summe</th><th><span class="sr-only">Kaufen</span></th></tr>
+            </thead>
+            <tbody>
+              <% cables.forEach(item => { %>
+                <tr>
+                  <td><strong><%= item.name %></strong></td>
+                  <td class="num amount"><%= item.amount.toLocaleString('de-DE', { maximumFractionDigits: 2 }) %> m</td>
+                  <td class="num"><%= item.unitPrice.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }) %></td>
+                  <td class="num"><%= item.totalPrice.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }) %></td>
+                  <td>
+                    <% if (item.website) { %>
+                      <a href="<%= item.website %>" target="_blank" rel="noopener" class="product-link">Beim Händler ansehen</a>
+                    <% } else { %>
+                      <span class="muted">Kein Link hinterlegt</span>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card shopping-card">
+        <div class="section-heading">
+          <div>
+            <h2>Stecker</h2>
+            <p class="card-description">Benötigte Stückzahl je Steckertyp.</p>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr><th>Produkt</th><th class="num">Benötigt</th><th class="num">Stückpreis</th><th class="num">Summe</th><th><span class="sr-only">Kaufen</span></th></tr>
+            </thead>
+            <tbody>
+              <% connectors.forEach(item => { %>
+                <tr>
+                  <td><strong><%= item.name %></strong></td>
+                  <td class="num amount"><%= item.amount %> Stück</td>
+                  <td class="num"><%= item.unitPrice.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }) %></td>
+                  <td class="num"><%= item.totalPrice.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }) %></td>
+                  <td>
+                    <% if (item.website) { %>
+                      <a href="<%= item.website %>" target="_blank" rel="noopener" class="product-link">Beim Händler ansehen</a>
+                    <% } else { %>
+                      <span class="muted">Kein Link hinterlegt</span>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <p class="list-note">Die Einkaufsliste berücksichtigt die exakten Längen. Verschnitt und Mindestbestellmengen sind nicht eingerechnet.</p>
+      <a href="/konfigurator?set=<%= selectedSet.id %>" class="btn-secondary">Konfiguration bearbeiten</a>
+    <% } %>
+
+    <section class="card offers-card">
+      <h2>Weitere Kabel-Angebote</h2>
+      <p class="card-description">Optional: Fertigkabel oder alternative Angebote separat nach Preis pro Meter vergleichen.</p>
+
       <form method="post" action="/einkaufsliste" class="form-row">
-        <input type="text" name="name" placeholder="Bezeichnung (z.B. Amazon HDMI 5m)" required>
+        <input type="hidden" name="set_id" value="<%= selectedSet?.id || '' %>">
+        <input type="text" name="name" placeholder="Bezeichnung" required>
         <input type="url" name="website" placeholder="Website (optional)">
         <input type="number" step="0.01" min="0" name="price" placeholder="Preis €" required>
         <input type="number" step="0.01" min="0.01" name="length_m" placeholder="Länge m" required>
-        <button type="submit">Hinzufügen</button>
+        <button type="submit">Angebot hinzufügen</button>
       </form>
 
-      <table>
-        <thead>
-          <tr><th>Bezeichnung</th><th>Website</th><th>Länge</th><th>Preis</th><th>Preis/m</th><th></th></tr>
-        </thead>
-        <tbody>
-          <% items.forEach(item => { %>
-            <tr class="<%= item.id === cheapestId ? 'best-value' : '' %>">
-              <td>
-                <%= item.name %>
-                <% if (item.id === cheapestId) { %><span class="badge">Bester Preis/m</span><% } %>
-              </td>
-              <td>
-                <% if (item.website) { %>
-                  <a href="<%= item.website %>" target="_blank" rel="noopener">Link</a>
-                <% } %>
-              </td>
-              <td><%= item.length_m %> m</td>
-              <td><%= item.price.toFixed(2) %> €</td>
-              <td><%= item.price_per_meter.toFixed(2) %> €/m</td>
-              <td>
-                <form method="post" action="/einkaufsliste/<%= item.id %>/delete" onsubmit="return confirm('Eintrag löschen?');">
-                  <button type="submit" class="btn-danger">Löschen</button>
-                </form>
-              </td>
-            </tr>
-          <% }) %>
-          <% if (items.length === 0) { %>
-            <tr><td colspan="6" class="empty">Noch keine Angebote gespeichert.</td></tr>
-          <% } %>
-        </tbody>
-      </table>
+      <% if (offers.length > 0) { %>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr><th>Bezeichnung</th><th>Website</th><th class="num">Länge</th><th class="num">Preis</th><th class="num">Preis/m</th><th><span class="sr-only">Aktionen</span></th></tr>
+            </thead>
+            <tbody>
+              <% offers.forEach(offer => { %>
+                <tr class="<%= offer.id === cheapestOfferId ? 'best-value' : '' %>">
+                  <td>
+                    <%= offer.name %>
+                    <% if (offer.id === cheapestOfferId) { %><span class="badge">Bester Preis/m</span><% } %>
+                  </td>
+                  <td>
+                    <% if (offer.website) { %>
+                      <a href="<%= offer.website %>" target="_blank" rel="noopener">Angebot ansehen</a>
+                    <% } %>
+                  </td>
+                  <td class="num"><%= offer.length_m.toLocaleString('de-DE') %> m</td>
+                  <td class="num"><%= offer.price.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }) %></td>
+                  <td class="num amount"><%= offer.price_per_meter.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }) %>/m</td>
+                  <td>
+                    <form method="post" action="/einkaufsliste/<%= offer.id %>/delete" onsubmit="return confirm('Angebot löschen?');">
+                      <input type="hidden" name="set_id" value="<%= selectedSet?.id || '' %>">
+                      <button type="submit" class="btn-danger">Löschen</button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
     </section>
   </main>
 </body>
